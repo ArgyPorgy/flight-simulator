@@ -1,0 +1,253 @@
+You are a senior game engine, AI simulation, and distributed systems engineer. Build a production-ready open-world flight simulator with real-world geography, Web3 authentication, and autonomous AI aircraft agents populating the world.
+
+## 🎯 Product Goal
+
+Create a realistic open-world flight simulator where:
+
+* Users authenticate via Privy
+* Each user has an embedded wallet
+* The game is single-player (no human multiplayer)
+* The world contains many AI-controlled aircraft agents
+* Aircraft agents behave like real pilots and air traffic
+* Terrain matches real Earth geography
+* The world streams dynamically as the player moves
+* The experience feels like a living airspace
+
+---
+
+## 🧠 Core Technology Choices
+
+### Engine / Rendering
+
+Use **Unreal Engine 5 (C++)** preferred for realism
+(Unity acceptable only if necessary)
+
+Must support:
+
+* High-fidelity graphics
+* Large-world streaming
+* Realistic physics
+* Aircraft simulation
+
+---
+
+## 🌍 Real-World Geography
+
+Use real Earth data.
+
+Preferred solution:
+
+* Cesium for Unreal / Cesium for Unity
+* OpenStreetMap integration
+* NASA SRTM elevation data
+* Satellite imagery tiles
+
+Requirements:
+
+* Real coordinates (lat/lon)
+* Terrain collision
+* Airport locations
+* Dynamic streaming of terrain
+* No full-world preload
+
+---
+
+## 🔐 Authentication & Wallet (Privy)
+
+Implement Privy login:
+
+* Email / Google / Wallet login supported
+* Each user receives embedded wallet
+* Wallet address stored in backend
+* Player profile linked to wallet
+* Secure session management
+
+---
+
+## ✈️ Player Aircraft Simulation
+
+Implement realistic flight physics:
+
+* Lift, drag, thrust modeling
+* Control surfaces
+* Stall behavior
+* Speed, altitude, heading instruments
+* Cockpit + external camera modes
+* Takeoff and landing capability
+* Fuel system placeholder
+
+Provide at least one detailed aircraft.
+
+---
+
+## 🤖 AI Aircraft Agents (Core Twist)
+
+Populate the world with autonomous aircraft agents.
+
+### Agent Requirements
+
+Agents must:
+
+* Spawn at airports or airspace zones
+* Fly realistic routes
+* Avoid terrain
+* Avoid collisions
+* Follow altitude rules
+* Perform takeoff and landing
+* Cruise between waypoints
+* Respond to nearby aircraft
+* Maintain separation distances
+
+### Behavior System
+
+Implement layered AI:
+
+#### Navigation
+
+* Waypoint-based routing
+* Real-world airport graph
+* Path planning over globe
+
+#### Flight Control
+
+* Autopilot-style controls
+* Speed/altitude management
+* Banking and turning behavior
+
+#### Traffic Awareness
+
+* Detect nearby aircraft
+* Adjust course to avoid collisions
+* Emergency maneuvers if necessary
+
+#### State Machine
+
+Agents should have states such as:
+
+* Taxi
+* Takeoff
+* Climb
+* Cruise
+* Descent
+* Landing
+* Holding pattern
+
+---
+
+## 🧠 Advanced Agent System (If feasible)
+
+Add intelligent behaviors:
+
+* Dynamic route generation
+* Randomized flight plans
+* Aircraft diversity
+* Commercial vs private flights
+* Weather avoidance placeholder
+* Emergency behavior
+
+Agents should create a believable living airspace.
+
+---
+
+## 🗺️ World Interaction
+
+* Player can spawn at airports
+* Select starting aircraft
+* Free-flight anywhere on Earth
+* Day/night cycle
+* Weather placeholder system
+* Radar showing nearby aircraft
+
+---
+
+## 🧾 Backend System
+
+Backend required for:
+
+* Player accounts
+* Wallet linkage
+* Settings persistence
+* Progress tracking
+* Aircraft unlocks (future)
+
+Suggested stack:
+
+* Node.js + TypeScript
+* PostgreSQL
+* Redis cache
+
+No real-time multiplayer state needed.
+
+---
+
+## ☁️ Production Infrastructure
+
+Design for cloud deployment:
+
+* Authentication services
+* API backend
+* Asset storage/CDN
+* Docker configuration
+* Environment configs
+
+---
+
+## 🖥️ Client Features
+
+Main menu:
+
+* Privy login
+* Aircraft selection
+* Spawn location map
+* Settings panel
+
+In-game:
+
+* HUD (speed, altitude, heading)
+* Radar/minimap
+* AI traffic indicators
+* Pause system
+* Camera controls
+
+---
+
+## 📦 Deliverables
+
+Generate:
+
+1. Full Unreal project structure
+2. Cesium integration setup
+3. Privy authentication integration
+4. Backend services
+5. AI agent system implementation
+6. Flight physics system
+7. UI system
+8. Database schema
+9. Deployment guide
+10. Architecture documentation
+
+---
+
+## 🚫 Constraints
+
+* Production-quality code only
+* No toy implementations
+* Modular architecture
+* Clean separation of systems
+* Scalable design
+
+---
+
+## 🎯 Stretch Goals (Optional)
+
+* Air Traffic Control simulation
+* Mission system
+* Token-gated aircraft using wallet
+* AI co-pilot assistant
+* Replay system
+* Spectator mode
+* VR support
+
+---
+
+Begin with system architecture, then implement step-by-step.
