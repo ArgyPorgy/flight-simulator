@@ -49,19 +49,34 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
   const selected = AIRCRAFT_OPTIONS.find(a => a.id === selectedAircraft)!;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl -top-48 -left-48 animate-pulse" />
-        <div className="absolute w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-3xl -bottom-32 -right-32 animate-pulse delay-1000" />
+    <div className="min-h-screen bg-black relative overflow-y-auto">
+      {/* Video background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        >
+          <source src="/videoplayback.mp4" type="video/mp4" />
+        </video>
+        {/* Overlay for better text readability - neutral dark overlay */}
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
+
+      {/* Animated background effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-3xl -top-48 -left-48 animate-pulse" />
+        <div className="absolute w-[400px] h-[400px] bg-violet-500/10 rounded-full blur-3xl -bottom-32 -right-32 animate-pulse delay-1000" />
         
         {/* Grid pattern */}
         <div 
           className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(34, 211, 238, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(34, 211, 238, 0.1) 1px, transparent 1px)
+              linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px',
           }}
@@ -69,7 +84,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between p-6 border-b border-cyan-500/20">
+      <header className="relative z-10 flex items-center justify-between p-6 border-b border-violet-500/20">
         <div className="flex items-center gap-4">
           <img 
             src="/skynet.jpg" 
@@ -78,7 +93,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
           />
           <div>
             <h1 className="text-2xl font-bold text-white tracking-wider">SKYNET</h1>
-            <p className="text-cyan-400 text-sm font-mono">FLIGHT SIMULATOR</p>
+            <p className="text-violet-400 text-sm font-mono">FLIGHT SIMULATOR</p>
           </div>
         </div>
 
@@ -103,12 +118,12 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
       </header>
 
       {/* Main content */}
-      <main className="relative z-10 max-w-6xl mx-auto p-8">
+      <main className="relative z-10 max-w-6xl mx-auto p-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Aircraft selection */}
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Plane className="w-5 h-5 text-cyan-400" />
+              <Plane className="w-5 h-5 text-violet-400" />
               SELECT AIRCRAFT
             </h2>
 
@@ -119,7 +134,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
                   onClick={() => setSelectedAircraft(aircraft.id)}
                   className={`p-4 rounded-lg border-2 transition-all text-left ${
                     selectedAircraft === aircraft.id
-                      ? 'border-cyan-500 bg-cyan-500/10'
+                      ? 'border-violet-500 bg-violet-500/10'
                       : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                   }`}
                 >
@@ -145,7 +160,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
           {/* Aircraft details */}
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-cyan-400" />
+              <Trophy className="w-5 h-5 text-violet-400" />
               AIRCRAFT SPECS
             </h2>
 
@@ -182,7 +197,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
             {/* Start button */}
             <button
               onClick={() => onStartGame(selectedAircraft)}
-              className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-lg rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-cyan-500/25"
+              className="w-full py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-lg rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-violet-500/25"
             >
               LAUNCH FLIGHT
             </button>
@@ -227,7 +242,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
             </div>
             <button
               onClick={() => setShowSettings(false)}
-              className="w-full mt-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition-colors"
+              className="w-full mt-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded transition-colors"
             >
               Close
             </button>

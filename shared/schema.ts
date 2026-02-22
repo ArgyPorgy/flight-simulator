@@ -26,6 +26,7 @@ export const aircraftAgents = pgTable("aircraft_agents", {
   destination: text("destination"),
   route: jsonb("route").$type<{lat: number, lon: number}[]>(),
   currentWaypointIndex: integer("current_waypoint_index").default(0),
+  walletAddress: text("wallet_address"), // Wallet address for the agent
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 

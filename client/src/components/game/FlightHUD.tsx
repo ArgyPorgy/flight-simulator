@@ -49,8 +49,8 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
         </div>
       </div>
 
-      {/* Right panel - Status indicators */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 space-y-2">
+      {/* Right panel - Status indicators - positioned below traffic panel */}
+      <div className="absolute right-4 top-[280px] space-y-2">
         {/* Gear indicator */}
         <div className={`px-3 py-2 rounded border ${
           hudData.gearDown 
@@ -103,7 +103,7 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
       </div>
 
       {/* Score & Traffic - Top right */}
-      <div className="absolute top-16 right-4 space-y-2">
+      <div className="absolute top-4 right-4 space-y-2">
         <div className="bg-black/70 border border-cyan-500/50 px-3 py-2 rounded">
           <div className="text-cyan-400 text-xs">SCORE</div>
           <div className="text-white text-lg font-bold">{hudData.score?.toLocaleString() || 0}</div>
@@ -112,13 +112,13 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
           {hudData.fps} FPS
         </div>
         
-        {/* Nearby Traffic Panel */}
+        {/* Nearby Traffic Panel - positioned to avoid gear indicator */}
         {traffic.length > 0 && (
-          <div className="bg-black/70 border border-yellow-500/50 px-3 py-2 rounded max-w-[200px]">
+          <div className="bg-black/70 border border-yellow-500/50 px-3 py-2 rounded max-w-[200px] max-h-[200px]">
             <div className="text-yellow-400 text-xs mb-2 flex items-center gap-1">
               <span>✈</span> TRAFFIC ({traffic.length})
             </div>
-            <div className="space-y-1 max-h-[150px] overflow-y-auto">
+            <div className="space-y-1 max-h-[140px] overflow-y-auto">
               {traffic.slice(0, 5).map((t, i) => (
                 <div key={i} className="text-xs border-b border-gray-700/50 pb-1 last:border-0">
                   <div className="flex justify-between">

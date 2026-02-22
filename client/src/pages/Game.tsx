@@ -8,10 +8,22 @@ import { GameCanvas } from '@/components/game/GameCanvas';
 type GameScreen = 'menu' | 'playing';
 
 export default function Game() {
-  const { ready: privyReady, logout } = usePrivy();
+  const { ready: privyReady, logout: privyLogout } = usePrivy();
   const { data: user, isLoading: isAuthLoading } = useMe();
   const [screen, setScreen] = useState<GameScreen>('menu');
   const [selectedAircraft, setSelectedAircraft] = useState<string>('fighter');
+
+  // Handle logout - clear session and logout from Privy
+  const handleLogout = async () => {
+    try {
+      // Clear backend session
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
+    // Logout from Privy
+    await privyLogout();
+  };
 
   // Wait for Privy to be ready
   if (!privyReady || isAuthLoading) {
@@ -51,7 +63,7 @@ export default function Game() {
         setSelectedAircraft(aircraft);
         setScreen('playing');
       }}
-      onLogout={logout}
+      onLogout={handleLogout}
     />
   );
 }

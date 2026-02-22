@@ -43,8 +43,13 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground overflow-hidden;
+    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground;
     font-family: var(--font-sans);
+  }
+  
+  html, body {
+    height: 100%;
+    overflow-y: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {

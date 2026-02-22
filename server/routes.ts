@@ -14,6 +14,16 @@ function generateFlightRoute(startLat: number, startLon: number) {
   ];
 }
 
+// Generate a random Ethereum wallet address
+function generateWalletAddress(): string {
+  const chars = '0123456789abcdef';
+  let address = '0x';
+  for (let i = 0; i < 40; i++) {
+    address += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return address;
+}
+
 async function spawnAgents(count: number) {
   const models = ["B737", "A320", "C172", "G650", "A350"];
   const types = ["commercial", "commercial", "private", "private", "commercial"];
@@ -42,7 +52,8 @@ async function spawnAgents(count: number) {
       origin,
       destination,
       route,
-      currentWaypointIndex: 1
+      currentWaypointIndex: 1,
+      walletAddress: generateWalletAddress() // Generate wallet address for each agent
     });
     created.push(agent);
   }
@@ -156,6 +167,27 @@ export async function registerRoutes(
     } catch (err) {
       res.status(500).json({ message: "Internal error" });
     }
+  });
+
+  app.post('/api/auth/logout', async (req, res) => {
+    return new Promise<void>((resolve) => {
+      if (req.session) {
+        const sessionId = req.session.id;
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Error destroying session:', err);
+            res.status(500).json({ message: "Error logging out" });
+            resolve();
+            return;
+          }
+          res.status(200).json({ message: "Logged out successfully" });
+          resolve();
+        });
+      } else {
+        res.status(200).json({ message: "Logged out successfully" });
+        resolve();
+      }
+    });
   });
 
   app.get(api.agents.list.path, async (req, res) => {

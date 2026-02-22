@@ -85,6 +85,16 @@ export function RadarMap({ agents, selectedAgentId, onSelectAgent }: RadarMapPro
                   <span className="text-muted-foreground">HDG</span>
                   <span className="text-white">{Math.round(agent.heading)}°</span>
                 </div>
+                {agent.walletAddress && (
+                  <div className="pt-2 mt-2 border-t border-primary/30">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">WALLET</span>
+                      <span className="text-primary font-mono text-[10px]">
+                        {agent.walletAddress.slice(0, 6)}...{agent.walletAddress.slice(-4)}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="pt-2 mt-2 border-t border-primary/30 text-center text-accent uppercase">
                   {agent.status}
                 </div>

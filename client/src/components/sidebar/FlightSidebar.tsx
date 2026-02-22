@@ -89,6 +89,16 @@ export function FlightSidebar({ agents, selectedAgentId, onSelectAgent }: Flight
                 </div>
               </div>
 
+              {agent.walletAddress && (
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    <span className="text-muted-foreground/60">WALLET</span>
+                    <div className="text-primary mt-0.5 break-all">
+                      {agent.walletAddress.slice(0, 6)}...{agent.walletAddress.slice(-4)}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
                 <div className="flex items-center gap-1 uppercase">
                   {agent.status === 'takeoff' || agent.status === 'climb' ? (
