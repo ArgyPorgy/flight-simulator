@@ -116,11 +116,37 @@ export async function registerRoutes(
           username: `Pilot_${input.walletAddress.substring(0, 6)}`
         });
       }
+      // Store user ID in session
+      if (req.session) {
+        req.session.userId = user.id;
+      }
       res.status(200).json(user);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid input" });
       }
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.get(api.auth.me.path, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        // Session has invalid user ID, clear it
+        if (req.session) {
+          req.session.userId = undefined;
+        }
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      res.status(200).json(user);
+    } catch (err) {
       res.status(500).json({ message: "Internal error" });
     }
   });

@@ -1,21 +1,61 @@
-import { useState } from "react";
+import { useEffect, useRef, useMemo } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useLogin } from "@/hooks/use-auth";
 import { Wallet, ShieldAlert, Fingerprint, Hexagon } from "lucide-react";
 
 export function LoginOverlay() {
+  const { ready, authenticated, login, user } = usePrivy();
+  const { wallets } = useWallets();
   const loginMutation = useLogin();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const syncedUserIdRef = useRef<string | null>(null);
+
+  // Extract wallet address in a stable way
+  const walletAddress = useMemo(() => {
+    const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+    return embeddedWallet?.address || wallets[0]?.address || "";
+  }, [wallets]);
+
+  // When Privy user is authenticated, sync with backend (only once per user)
+  useEffect(() => {
+    if (!ready || !authenticated || !user) {
+      return;
+    }
+
+    // Skip if we've already synced this user
+    if (syncedUserIdRef.current === user.id) {
+      return;
+    }
+
+    // Skip if mutation is already in progress or completed
+    if (loginMutation.isPending || loginMutation.isSuccess) {
+      return;
+    }
+
+    if (walletAddress) {
+      syncedUserIdRef.current = user.id;
+      loginMutation.mutate({
+        privyId: user.id,
+        walletAddress: walletAddress,
+      });
+    }
+  }, [ready, authenticated, user?.id, walletAddress, loginMutation.isPending, loginMutation.isSuccess, loginMutation.mutate]);
+
+  // Reset the ref if user logs out
+  useEffect(() => {
+    if (!authenticated) {
+      syncedUserIdRef.current = null;
+    }
+  }, [authenticated]);
 
   const handleConnect = async () => {
-    setIsConnecting(true);
-    // Simulate web3 wallet connection delay
-    setTimeout(() => {
-      loginMutation.mutate({
-        privyId: `privy_did_${Math.random().toString(36).substring(7)}`,
-        walletAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
-      });
-    }, 1500);
+    try {
+      await login();
+    } catch (error) {
+      console.error("Privy login error:", error);
+    }
   };
+
+  const isConnecting = !ready || loginMutation.isPending;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center scanlines bg-background/80 backdrop-blur-sm">
@@ -60,10 +100,10 @@ export function LoginOverlay() {
 
           <button
             onClick={handleConnect}
-            disabled={isConnecting || loginMutation.isPending}
+            disabled={isConnecting}
             className="w-full relative group overflow-hidden bg-primary/10 border border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-6 py-4 rounded-lg font-display font-bold text-lg tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isConnecting || loginMutation.isPending ? (
+            {isConnecting ? (
               <>
                 <ShieldAlert className="w-5 h-5 animate-pulse" />
                 <span>AUTHENTICATING...</span>
