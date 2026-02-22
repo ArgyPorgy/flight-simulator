@@ -10,6 +10,9 @@ import { pool } from "./db";
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy (needed for Render and other hosting platforms)
+app.set('trust proxy', 1);
+
 // Configure session management
 // Use PostgreSQL store in production, MemoryStore in development
 let sessionStore: session.Store;
@@ -71,10 +74,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production", // HTTPS only in production
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: "lax",
+      sameSite: "lax", // Same-origin, so lax is fine
     },
   })
 );
