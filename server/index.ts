@@ -14,11 +14,48 @@ const httpServer = createServer(app);
 // Use PostgreSQL store in production, MemoryStore in development
 let sessionStore: session.Store;
 if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
+  // Manually create session table if it doesn't exist
+  // This avoids issues with connect-pg-simple's SQL file not being accessible after bundling
+  (async () => {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL
+        )
+        WITH (OIDS=FALSE);
+      `);
+      
+      // Add primary key constraint (ignore if already exists)
+      try {
+        await pool.query(`
+          ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+        `);
+      } catch (err: any) {
+        // Constraint might already exist, that's okay
+        if (!err.message?.includes("already exists") && !err.message?.includes("duplicate")) {
+          throw err;
+        }
+      }
+      
+      // Create index (ignore if already exists)
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+      `);
+    } catch (err: any) {
+      // Table might already exist, that's okay
+      if (!err.message?.includes("already exists") && !err.message?.includes("duplicate")) {
+        console.error("Error creating session table:", err);
+      }
+    }
+  })();
+
   const PgStore = connectPgSimple(session);
   sessionStore = new PgStore({
     pool: pool as any,
-    tableName: "session", // Optional: customize table name
-    createTableIfMissing: true, // Automatically create session table
+    tableName: "session",
+    createTableIfMissing: false, // We create it manually above
   });
 } else {
   const SessionStore = MemoryStore(session);

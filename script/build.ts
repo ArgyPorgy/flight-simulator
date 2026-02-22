@@ -4,10 +4,10 @@ import { rm, readFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
+// Note: connect-pg-simple must be external because it needs access to its SQL file
 const allowlist = [
   "@google/generative-ai",
   "axios",
-  "connect-pg-simple",
   "cors",
   "date-fns",
   "drizzle-orm",
@@ -45,6 +45,11 @@ async function buildAll() {
     ...Object.keys(pkg.devDependencies || {}),
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  
+  // Ensure connect-pg-simple is external (needs access to its SQL file)
+  if (!externals.includes("connect-pg-simple")) {
+    externals.push("connect-pg-simple");
+  }
 
   await esbuild({
     entryPoints: ["server/index.ts"],
