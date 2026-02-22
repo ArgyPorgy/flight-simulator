@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: flight-simulator
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flight-simulator-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # VITE_PRIVY_APP_ID must be set manually in Render dashboard
+      # This is needed at build time for Vite to include it in the client bundle
+      - key: VITE_PRIVY_APP_ID
+        sync: false
+
+databases:
+  - name: flight-simulator-db
+    plan: starter
+    databaseName: flight_simulator
+    user: flight_simulator_user

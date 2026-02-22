@@ -1,20 +1,35 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
 
 // Configure session management
-const SessionStore = MemoryStore(session);
+// Use PostgreSQL store in production, MemoryStore in development
+let sessionStore: session.Store;
+if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
+  const PgStore = connectPgSimple(session);
+  sessionStore = new PgStore({
+    pool: pool as any,
+    tableName: "session", // Optional: customize table name
+    createTableIfMissing: true, // Automatically create session table
+  });
+} else {
+  const SessionStore = MemoryStore(session);
+  sessionStore = new SessionStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  });
+}
+
 app.use(
   session({
-    store: new SessionStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
