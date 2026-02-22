@@ -3,7 +3,7 @@ services:
     name: flight-simulator
     env: node
     plan: starter
-    buildCommand: NODE_ENV=development npm install && npm run build
+    buildCommand: bash script/render-build.sh
     startCommand: npm start
     envVars:
       - key: NODE_ENV
