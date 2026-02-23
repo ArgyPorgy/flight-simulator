@@ -1,13 +1,14 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useLogin } from "@/hooks/use-auth";
 import { Wallet, ShieldAlert } from "lucide-react";
 
 export function LoginOverlay() {
-  const { ready, authenticated, login, user } = usePrivy();
+  const { ready, authenticated, login, user, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const loginMutation = useLogin();
   const syncedUserIdRef = useRef<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Extract wallet address in a stable way
   const walletAddress = useMemo(() => {
@@ -18,16 +19,18 @@ export function LoginOverlay() {
   // When Privy user is authenticated, sync with backend (only once per user)
   useEffect(() => {
     if (!ready || !authenticated || !user) {
+      setIsConnecting(false);
       return;
     }
 
     // Skip if we've already synced this user
     if (syncedUserIdRef.current === user.id) {
+      setIsConnecting(false);
       return;
     }
 
-    // Skip if mutation is already in progress or completed
-    if (loginMutation.isPending || loginMutation.isSuccess) {
+    // Skip if mutation is already in progress
+    if (loginMutation.isPending) {
       return;
     }
 
@@ -38,7 +41,7 @@ export function LoginOverlay() {
         walletAddress: walletAddress,
       });
     }
-  }, [ready, authenticated, user?.id, walletAddress, loginMutation.isPending, loginMutation.isSuccess, loginMutation.mutate]);
+  }, [ready, authenticated, user?.id, walletAddress, loginMutation.isPending, loginMutation.mutate]);
 
   // Reset the ref if user logs out
   useEffect(() => {
@@ -47,15 +50,55 @@ export function LoginOverlay() {
     }
   }, [authenticated]);
 
+  // Handle mutation success/error
+  useEffect(() => {
+    if (loginMutation.isSuccess || loginMutation.isError) {
+      setIsConnecting(false);
+    }
+  }, [loginMutation.isSuccess, loginMutation.isError]);
+
   const handleConnect = async () => {
+    setIsConnecting(true);
     try {
-      await login();
-    } catch (error) {
+      // If user is already authenticated with Privy but backend session failed,
+      // just trigger the backend sync again
+      if (authenticated && user && walletAddress) {
+        syncedUserIdRef.current = null; // Reset to allow re-sync
+        loginMutation.mutate({
+          privyId: user.id,
+          walletAddress: walletAddress,
+        });
+      } else {
+        // Normal login flow
+        await login();
+      }
+    } catch (error: any) {
       console.error("Privy login error:", error);
+      // If user is already logged in, try to connect wallet instead
+      if (error?.message?.includes("already logged in") || authenticated) {
+        try {
+          // User is already authenticated, just need to sync with backend
+          if (user && walletAddress) {
+            syncedUserIdRef.current = null;
+            loginMutation.mutate({
+              privyId: user.id,
+              walletAddress: walletAddress,
+            });
+          } else if (authenticated) {
+            // Try connecting a wallet
+            await connectWallet();
+          }
+        } catch (innerError) {
+          console.error("Fallback connection error:", innerError);
+          setIsConnecting(false);
+        }
+      } else {
+        setIsConnecting(false);
+      }
     }
   };
 
-  const isConnecting = !ready || loginMutation.isPending;
+  const showConnecting = !ready || loginMutation.isPending || isConnecting;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center scanlines bg-background/80 backdrop-blur-sm">
@@ -103,10 +146,10 @@ export function LoginOverlay() {
 
           <button
             onClick={handleConnect}
-            disabled={isConnecting}
+            disabled={showConnecting}
             className="w-full relative group overflow-hidden bg-primary/10 border border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-6 py-4 rounded-lg font-display font-bold text-lg tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isConnecting ? (
+            {showConnecting ? (
               <>
                 <ShieldAlert className="w-5 h-5 animate-pulse" />
                 <span>AUTHENTICATING...</span>

@@ -70,7 +70,8 @@ function startSimulationLoop() {
       const agents = await storage.getAgents();
       for (const agent of agents) {
         if (agent.status === "cruise" && agent.route && agent.route.length > 0) {
-          const dest = agent.route[agent.currentWaypointIndex];
+          const waypointIndex = agent.currentWaypointIndex ?? 0;
+          const dest = agent.route[waypointIndex];
           if (!dest) continue;
           
           // Calculate heading towards destination
@@ -119,6 +120,8 @@ export async function registerRoutes(
   app.post(api.auth.login.path, async (req, res) => {
     try {
       const input = api.auth.login.input.parse(req.body);
+      console.log(`[AUTH] Login attempt for privyId: ${input.privyId.substring(0, 20)}...`);
+      
       let user = await storage.getUserByPrivy(input.privyId);
       if (!user) {
         user = await storage.createUser({
@@ -126,20 +129,42 @@ export async function registerRoutes(
           walletAddress: input.walletAddress,
           username: `Pilot_${input.walletAddress.substring(0, 6)}`
         });
+        console.log(`[AUTH] Created new user: ${user.id}`);
+      } else {
+        console.log(`[AUTH] Found existing user: ${user.id}`);
       }
-      // Store user ID in session
-      if (req.session) {
-        req.session.userId = user.id;
-        // Explicitly save session to ensure it persists
-        await new Promise<void>((resolve, reject) => {
-          req.session?.save((err) => {
-            if (err) reject(err);
-            else resolve();
-          });
+      
+      // Regenerate session to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('[AUTH] Session regenerate error:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
         });
-      }
+      });
+      
+      // Store user ID in session
+      req.session.userId = user.id;
+      
+      // Explicitly save session to ensure it persists
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('[AUTH] Session save error:', err);
+            reject(err);
+          } else {
+            console.log(`[AUTH] Session saved for user ${user!.id}, sessionId: ${req.session.id?.substring(0, 10)}...`);
+            resolve();
+          }
+        });
+      });
+      
       res.status(200).json(user);
     } catch (err) {
+      console.error('[AUTH] Login error:', err);
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid input" });
       }
@@ -150,6 +175,8 @@ export async function registerRoutes(
   app.get(api.auth.me.path, async (req, res) => {
     try {
       const userId = req.session?.userId;
+      console.log(`[AUTH] /me check - sessionId: ${req.session?.id?.substring(0, 10) || 'none'}..., userId: ${userId || 'none'}`);
+      
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -157,6 +184,7 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user) {
         // Session has invalid user ID, clear it
+        console.log(`[AUTH] User ${userId} not found in database, clearing session`);
         if (req.session) {
           req.session.userId = undefined;
         }
@@ -165,6 +193,7 @@ export async function registerRoutes(
       
       res.status(200).json(user);
     } catch (err) {
+      console.error('[AUTH] /me error:', err);
       res.status(500).json({ message: "Internal error" });
     }
   });

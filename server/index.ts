@@ -71,13 +71,14 @@ app.use(
   session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
-    resave: false,
-    saveUninitialized: false,
+    resave: true, // Changed to true to ensure session is saved on every request
+    saveUninitialized: true, // Changed to true to create session for all users
+    rolling: true, // Reset cookie expiration on every response
     cookie: {
       secure: process.env.NODE_ENV === "production", // HTTPS only in production
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: "lax", // Same-origin, so lax is fine
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // "none" for cross-site in production (with secure)
     },
   })
 );
