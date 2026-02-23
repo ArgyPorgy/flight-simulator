@@ -1,14 +1,15 @@
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useLogin } from "@/hooks/use-auth";
 import { Wallet, ShieldAlert } from "lucide-react";
 
 export function LoginOverlay() {
-  const { ready, authenticated, login, user, connectWallet } = usePrivy();
+  const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const loginMutation = useLogin();
-  const syncedUserIdRef = useRef<string | null>(null);
+  const syncAttemptedRef = useRef(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Extract wallet address in a stable way
   const walletAddress = useMemo(() => {
@@ -16,85 +17,133 @@ export function LoginOverlay() {
     return embeddedWallet?.address || wallets[0]?.address || "";
   }, [wallets]);
 
-  // When Privy user is authenticated, sync with backend (only once per user)
-  useEffect(() => {
-    if (!ready || !authenticated || !user) {
-      setIsConnecting(false);
-      return;
+  // Sync with backend
+  const syncWithBackend = useCallback(() => {
+    if (!user || !walletAddress) {
+      console.log("[Auth] Cannot sync - missing user or wallet", { user: !!user, walletAddress: !!walletAddress });
+      return false;
     }
-
-    // Skip if we've already synced this user
-    if (syncedUserIdRef.current === user.id) {
-      setIsConnecting(false);
-      return;
-    }
-
-    // Skip if mutation is already in progress
+    
     if (loginMutation.isPending) {
-      return;
+      console.log("[Auth] Sync already in progress");
+      return true;
     }
 
-    if (walletAddress) {
-      syncedUserIdRef.current = user.id;
-      loginMutation.mutate({
-        privyId: user.id,
-        walletAddress: walletAddress,
-      });
-    }
-  }, [ready, authenticated, user?.id, walletAddress, loginMutation.isPending, loginMutation.mutate]);
+    console.log("[Auth] Syncing with backend...", { privyId: user.id, walletAddress });
+    loginMutation.mutate({
+      privyId: user.id,
+      walletAddress: walletAddress,
+    });
+    return true;
+  }, [user, walletAddress, loginMutation]);
 
-  // Reset the ref if user logs out
+  // Auto-sync when Privy is authenticated and we have wallet
+  useEffect(() => {
+    if (!ready) return;
+    
+    // If authenticated with Privy and have wallet, sync with backend
+    if (authenticated && user && walletAddress && !syncAttemptedRef.current && !loginMutation.isPending) {
+      console.log("[Auth] Auto-syncing authenticated user");
+      syncAttemptedRef.current = true;
+      syncWithBackend();
+    }
+  }, [ready, authenticated, user, walletAddress, loginMutation.isPending, syncWithBackend]);
+
+  // Reset sync flag when user logs out
   useEffect(() => {
     if (!authenticated) {
-      syncedUserIdRef.current = null;
+      syncAttemptedRef.current = false;
+      setError(null);
     }
   }, [authenticated]);
 
-  // Handle mutation success/error
+  // Handle mutation results
   useEffect(() => {
-    if (loginMutation.isSuccess || loginMutation.isError) {
+    if (loginMutation.isSuccess) {
       setIsConnecting(false);
+      setError(null);
+    }
+    if (loginMutation.isError) {
+      setIsConnecting(false);
+      setError("Failed to sync with server. Please try again.");
     }
   }, [loginMutation.isSuccess, loginMutation.isError]);
 
   const handleConnect = async () => {
     setIsConnecting(true);
+    setError(null);
+
     try {
-      // If user is already authenticated with Privy but backend session failed,
-      // just trigger the backend sync again
-      if (authenticated && user && walletAddress) {
-        syncedUserIdRef.current = null; // Reset to allow re-sync
-        loginMutation.mutate({
-          privyId: user.id,
-          walletAddress: walletAddress,
-        });
-      } else {
-        // Normal login flow
-        await login();
-      }
-    } catch (error: any) {
-      console.error("Privy login error:", error);
-      // If user is already logged in, try to connect wallet instead
-      if (error?.message?.includes("already logged in") || authenticated) {
-        try {
-          // User is already authenticated, just need to sync with backend
-          if (user && walletAddress) {
-            syncedUserIdRef.current = null;
-            loginMutation.mutate({
-              privyId: user.id,
-              walletAddress: walletAddress,
-            });
-          } else if (authenticated) {
-            // Try connecting a wallet
-            await connectWallet();
+      // Case 1: Already authenticated with Privy - just sync with backend
+      if (authenticated && user) {
+        console.log("[Auth] User already authenticated with Privy, syncing backend");
+        
+        if (walletAddress) {
+          // Have wallet, sync with backend
+          syncAttemptedRef.current = false; // Allow re-sync
+          const synced = syncWithBackend();
+          if (!synced) {
+            setError("Unable to sync. Please refresh the page.");
+            setIsConnecting(false);
           }
-        } catch (innerError) {
-          console.error("Fallback connection error:", innerError);
-          setIsConnecting(false);
+        } else {
+          // No wallet yet - this shouldn't happen with Privy embedded wallet
+          // Wait a bit for wallet to load
+          console.log("[Auth] Waiting for wallet to load...");
+          setTimeout(() => {
+            if (walletAddress) {
+              syncAttemptedRef.current = false;
+              syncWithBackend();
+            } else {
+              setError("Wallet not found. Please refresh and try again.");
+              setIsConnecting(false);
+            }
+          }, 2000);
         }
+        return;
+      }
+
+      // Case 2: Not authenticated - do normal Privy login
+      console.log("[Auth] Starting Privy login");
+      await login();
+      // After login, the useEffect will handle syncing
+      
+    } catch (err: any) {
+      console.error("[Auth] Login error:", err);
+      
+      // Handle "already logged in" error from Privy
+      if (err?.message?.includes("already logged in") || err?.message?.includes("link")) {
+        console.log("[Auth] Privy says already logged in, attempting sync");
+        // User is logged in with Privy but we didn't detect it
+        // This can happen if `authenticated` state hasn't updated yet
+        setTimeout(() => {
+          if (user && walletAddress) {
+            syncAttemptedRef.current = false;
+            syncWithBackend();
+          } else {
+            // Force a page refresh to reset Privy state
+            setError("Session conflict detected. Refreshing...");
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        }, 500);
       } else {
+        setError(err?.message || "Login failed. Please try again.");
         setIsConnecting(false);
       }
+    }
+  };
+
+  // Handle logout (for error recovery)
+  const handleLogout = async () => {
+    try {
+      await logout();
+      syncAttemptedRef.current = false;
+      setError(null);
+      setIsConnecting(false);
+    } catch (err) {
+      console.error("[Auth] Logout error:", err);
+      // Force refresh
+      window.location.reload();
     }
   };
 
@@ -144,6 +193,13 @@ export function LoginOverlay() {
             </div>
           </div>
 
+          {/* Error message */}
+          {error && (
+            <div className="w-full bg-red-500/20 border border-red-500/50 p-3 rounded text-red-400 text-sm font-mono">
+              {error}
+            </div>
+          )}
+
           <button
             onClick={handleConnect}
             disabled={showConnecting}
@@ -164,6 +220,16 @@ export function LoginOverlay() {
             {/* Button hover sweep effect */}
             <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           </button>
+
+          {/* Reset button - shown when there's an error or user is stuck */}
+          {(error || (authenticated && !loginMutation.isPending && !loginMutation.isSuccess)) && (
+            <button
+              onClick={handleLogout}
+              className="w-full text-sm text-muted-foreground hover:text-red-400 transition-colors font-mono"
+            >
+              Having trouble? Click here to reset
+            </button>
+          )}
         </div>
       </div>
     </div>
