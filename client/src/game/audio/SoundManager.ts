@@ -283,6 +283,151 @@ export class SoundManager {
   }
 
   /**
+   * Play bullet/gun fire sound
+   */
+  public playBullet(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    // Quick sharp sound for bullet
+    const osc = ctx.createOscillator();
+    const noise = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    const noiseGain = ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+
+    noise.type = 'sawtooth';
+    noise.frequency.setValueAtTime(2000, ctx.currentTime);
+
+    gainNode.gain.setValueAtTime(this.masterVolume * 0.15, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+
+    noiseGain.gain.setValueAtTime(this.masterVolume * 0.1, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.03);
+
+    osc.connect(gainNode);
+    noise.connect(noiseGain);
+    gainNode.connect(ctx.destination);
+    noiseGain.connect(ctx.destination);
+
+    osc.start();
+    noise.start();
+    osc.stop(ctx.currentTime + 0.05);
+    noise.stop(ctx.currentTime + 0.03);
+  }
+
+  /**
+   * Play missile launch sound
+   */
+  public playMissile(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    // Whoosh + ignition sound
+    const osc = ctx.createOscillator();
+    const noise = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    const noiseGain = ctx.createGain();
+
+    // Rising whoosh
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.3);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.6);
+
+    // Rocket ignition noise
+    noise.type = 'sawtooth';
+    noise.frequency.setValueAtTime(1500, ctx.currentTime);
+    noise.frequency.linearRampToValueAtTime(800, ctx.currentTime + 0.6);
+
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(this.masterVolume * 0.3, ctx.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+
+    noiseGain.gain.setValueAtTime(this.masterVolume * 0.2, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+
+    osc.connect(gainNode);
+    noise.connect(noiseGain);
+    gainNode.connect(ctx.destination);
+    noiseGain.connect(ctx.destination);
+
+    osc.start();
+    noise.start();
+    osc.stop(ctx.currentTime + 0.6);
+    noise.stop(ctx.currentTime + 0.5);
+  }
+
+  /**
+   * Play bomb/missile explosion sound (for ground/building impacts)
+   */
+  public playExplosion(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    // Deep rumbling explosion
+    const bassOsc = ctx.createOscillator();
+    const midOsc = ctx.createOscillator();
+    const noiseOsc = ctx.createOscillator();
+    
+    const bassGain = ctx.createGain();
+    const midGain = ctx.createGain();
+    const noiseGain = ctx.createGain();
+    const masterGain = ctx.createGain();
+
+    // Deep bass boom
+    bassOsc.type = 'sine';
+    bassOsc.frequency.setValueAtTime(80, ctx.currentTime);
+    bassOsc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.8);
+
+    // Mid frequency crunch
+    midOsc.type = 'sawtooth';
+    midOsc.frequency.setValueAtTime(200, ctx.currentTime);
+    midOsc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.5);
+
+    // High frequency debris/crackle
+    noiseOsc.type = 'square';
+    noiseOsc.frequency.setValueAtTime(800, ctx.currentTime);
+    noiseOsc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+
+    // Envelope for bass
+    bassGain.gain.setValueAtTime(this.masterVolume * 0.8, ctx.currentTime);
+    bassGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+
+    // Envelope for mid
+    midGain.gain.setValueAtTime(this.masterVolume * 0.5, ctx.currentTime);
+    midGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+
+    // Envelope for noise
+    noiseGain.gain.setValueAtTime(this.masterVolume * 0.3, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    masterGain.gain.setValueAtTime(1, ctx.currentTime);
+
+    // Connect
+    bassOsc.connect(bassGain);
+    midOsc.connect(midGain);
+    noiseOsc.connect(noiseGain);
+    
+    bassGain.connect(masterGain);
+    midGain.connect(masterGain);
+    noiseGain.connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    // Start and stop
+    bassOsc.start();
+    midOsc.start();
+    noiseOsc.start();
+    
+    bassOsc.stop(ctx.currentTime + 1.0);
+    midOsc.stop(ctx.currentTime + 0.6);
+    noiseOsc.stop(ctx.currentTime + 0.3);
+  }
+
+  /**
    * Play success/landing sound
    */
   public playSuccess(): void {

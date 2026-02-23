@@ -123,7 +123,7 @@ export function FlightSidebar({ agents, selectedAgentId, onSelectAgent }: Flight
       
       {/* Footer Branding */}
       <div className="p-2 text-center text-[10px] font-mono text-muted-foreground/50 border-t border-border bg-black/40">
-        NEXUS ATC v1.0.4 // REAL-TIME MESH
+        SKYNET v1.0.4 // REAL-TIME MESH
       </div>
     </div>
   );

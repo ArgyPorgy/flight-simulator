@@ -5,9 +5,10 @@ import { FlightHUD } from './FlightHUD';
 
 interface GameCanvasProps {
   onExit?: () => void;
+  aircraftType?: string;
 }
 
-export function GameCanvas({ onExit }: GameCanvasProps) {
+export function GameCanvas({ onExit, aircraftType = 'fighter' }: GameCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const simulatorRef = useRef<FlightSimulator | null>(null);
   
@@ -37,12 +38,13 @@ export function GameCanvas({ onExit }: GameCanvasProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Create simulator
+    // Create simulator with aircraft type
     const simulator = new FlightSimulator(containerRef.current, {
       onHUDUpdate: handleHUDUpdate,
       onTrafficUpdate: handleTrafficUpdate,
       onGameStateChange: handleGameStateChange,
       onScoreUpdate: handleScoreUpdate,
+      aircraftType,
     });
 
     simulatorRef.current = simulator;
@@ -85,11 +87,11 @@ export function GameCanvas({ onExit }: GameCanvasProps) {
       {/* HUD overlay */}
       <FlightHUD hudData={hudData} traffic={traffic} />
 
-      {/* END button - Top right */}
+      {/* END button - Top left */}
       {gameState === 'playing' && (
         <button
           onClick={handleEndGame}
-          className="absolute top-4 right-4 z-50 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono rounded transition-colors shadow-lg"
+          className="absolute top-4 left-4 z-50 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono rounded transition-colors shadow-lg"
         >
           END FLIGHT
         </button>

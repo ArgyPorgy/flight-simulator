@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { useMe } from '@/hooks/use-auth';
+import { useMe, useLogout } from '@/hooks/use-auth';
 import { LoginOverlay } from '@/components/auth/LoginOverlay';
 import { MainMenu } from '@/components/game/MainMenu';
 import { GameCanvas } from '@/components/game/GameCanvas';
@@ -10,14 +10,15 @@ type GameScreen = 'menu' | 'playing';
 export default function Game() {
   const { ready: privyReady, logout: privyLogout } = usePrivy();
   const { data: user, isLoading: isAuthLoading } = useMe();
+  const logoutMutation = useLogout();
   const [screen, setScreen] = useState<GameScreen>('menu');
   const [selectedAircraft, setSelectedAircraft] = useState<string>('fighter');
 
   // Handle logout - clear session and logout from Privy
   const handleLogout = async () => {
     try {
-      // Clear backend session
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      // Clear backend session and invalidate cache
+      await logoutMutation.mutateAsync();
     } catch (error) {
       console.error('Error clearing session:', error);
     }
@@ -50,6 +51,7 @@ export default function Game() {
       <div className="h-screen w-screen">
         <GameCanvas 
           onExit={() => setScreen('menu')}
+          aircraftType={selectedAircraft}
         />
       </div>
     );

@@ -87,7 +87,7 @@ export function MainMenu({ username, onStartGame, onLogout }: MainMenuProps) {
       <header className="relative z-10 flex items-center justify-between p-6 border-b border-violet-500/20">
         <div className="flex items-center gap-4">
           <img 
-            src="/skynet.jpg" 
+            src="/skynet.png" 
             alt="SKYNET Logo" 
             className="w-16 h-16 object-contain rounded-lg"
           />

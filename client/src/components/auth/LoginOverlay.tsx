@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useLogin } from "@/hooks/use-auth";
-import { Wallet, ShieldAlert, Fingerprint, Hexagon } from "lucide-react";
+import { Wallet, ShieldAlert } from "lucide-react";
 
 export function LoginOverlay() {
   const { ready, authenticated, login, user } = usePrivy();
@@ -69,13 +69,16 @@ export function LoginOverlay() {
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-            <Hexagon className="w-20 h-20 text-primary relative z-10 animate-[spin_10s_linear_infinite]" />
-            <Fingerprint className="w-10 h-10 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20" />
+            <img 
+              src="/skynet.png" 
+              alt="SKYNET" 
+              className="w-20 h-20 object-contain rounded-lg relative z-10"
+            />
           </div>
 
           <div className="space-y-2">
             <h1 className="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
-              Nexus ATC Access
+              SKYNET
             </h1>
             <p className="text-muted-foreground font-mono text-sm">
               UNAUTHORIZED ACCESS PROHIBITED. <br/>

@@ -15,7 +15,7 @@ export interface TrafficInfo {
 export class AITrafficManager {
   private aircraft: AIAircraft[] = [];
   private scene: THREE.Scene;
-  private maxAircraft = 60;
+  private maxAircraft = 120; // Increased to support 100+ aircraft
   private spawnRadius = 12000;
   private playerStartPosition = new THREE.Vector3(-2500, 150, 500);
   
@@ -213,6 +213,27 @@ export class AITrafficManager {
   
   public getAircraftCount(): number {
     return this.aircraft.length;
+  }
+  
+  // Get all aircraft positions for weapon targeting
+  public getAircraftPositions(): THREE.Vector3[] {
+    return this.aircraft.map(a => a.state.position.clone());
+  }
+  
+  // Destroy aircraft at a given position (called when hit by weapon)
+  public destroyAircraftAt(position: THREE.Vector3, radius: number = 50): boolean {
+    for (let i = 0; i < this.aircraft.length; i++) {
+      const aircraft = this.aircraft[i];
+      if (aircraft.state.position.distanceTo(position) < radius) {
+        // Remove from scene
+        this.scene.remove(aircraft.mesh);
+        // Remove from array
+        this.aircraft.splice(i, 1);
+        console.log(`💥 Aircraft destroyed!`);
+        return true;
+      }
+    }
+    return false;
   }
   
   public dispose(): void {

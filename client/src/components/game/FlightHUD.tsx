@@ -49,8 +49,8 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
         </div>
       </div>
 
-      {/* Right panel - Status indicators - positioned below traffic panel */}
-      <div className="absolute right-4 top-[280px] space-y-2">
+      {/* Right panel - Status indicators - centered vertically */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 space-y-2">
         {/* Gear indicator */}
         <div className={`px-3 py-2 rounded border ${
           hudData.gearDown 
@@ -102,40 +102,68 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
         <Radar traffic={traffic} />
       </div>
 
-      {/* Score & Traffic - Top right */}
+      {/* Score - Top right (above gear panel) */}
       <div className="absolute top-4 right-4 space-y-2">
         <div className="bg-black/70 border border-cyan-500/50 px-3 py-2 rounded">
           <div className="text-cyan-400 text-xs">SCORE</div>
           <div className="text-white text-lg font-bold">{hudData.score?.toLocaleString() || 0}</div>
         </div>
+        {hudData.hasWeapons && hudData.kills !== undefined && hudData.kills > 0 && (
+          <div className="bg-red-900/70 border border-red-500/50 px-3 py-2 rounded">
+            <div className="text-red-400 text-xs">KILLS</div>
+            <div className="text-white text-lg font-bold">{hudData.kills}</div>
+          </div>
+        )}
         <div className="bg-black/50 px-2 py-1 rounded text-xs text-gray-400">
           {hudData.fps} FPS
         </div>
-        
-        {/* Nearby Traffic Panel - positioned to avoid gear indicator */}
-        {traffic.length > 0 && (
-          <div className="bg-black/70 border border-yellow-500/50 px-3 py-2 rounded max-w-[200px] max-h-[200px]">
-            <div className="text-yellow-400 text-xs mb-2 flex items-center gap-1">
-              <span>✈</span> TRAFFIC ({traffic.length})
-            </div>
-            <div className="space-y-1 max-h-[140px] overflow-y-auto">
-              {traffic.slice(0, 5).map((t, i) => (
-                <div key={i} className="text-xs border-b border-gray-700/50 pb-1 last:border-0">
-                  <div className="flex justify-between">
-                    <span className="text-yellow-300 font-mono">{t.callsign}</span>
-                    <span className="text-gray-400">{(t.distance / 1000).toFixed(1)}km</span>
-                  </div>
-                  <div className="flex justify-between text-gray-500">
-                    <span>{Math.floor(t.altitude)}ft</span>
-                    <span>{Math.floor(t.speed)}kts</span>
-                    <span>{Math.floor(t.heading)}°</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Traffic Panel - Top left (separate from gear) */}
+      {traffic.length > 0 && (
+        <div className="absolute top-20 left-4 bg-black/70 border border-yellow-500/50 px-3 py-2 rounded max-w-[200px]">
+          <div className="text-yellow-400 text-xs mb-2 flex items-center gap-1">
+            <span>✈</span> TRAFFIC ({traffic.length})
+          </div>
+          <div className="space-y-1 max-h-[150px] overflow-y-auto">
+            {traffic.slice(0, 5).map((t, i) => (
+              <div key={i} className="text-xs border-b border-gray-700/50 pb-1 last:border-0">
+                <div className="flex justify-between gap-2">
+                  <span className="text-yellow-300 font-mono">{t.callsign}</span>
+                  <span className="text-gray-400">{(t.distance / 1000).toFixed(1)}km</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>{Math.floor(t.altitude)}ft</span>
+                  <span>{Math.floor(t.speed)}kts</span>
+                  <span>{Math.floor(t.heading)}°</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Weapons Panel - Right side, above gear panel (only for combat aircraft) */}
+      {hudData.hasWeapons && (
+        <div className="absolute right-4 top-[28%] flex gap-3">
+          {/* Bullets */}
+          <div className="bg-black/80 border border-orange-500/50 px-3 py-2 rounded">
+            <div className="text-orange-400 text-xs text-center">BULLETS</div>
+            <div className="text-white text-xl font-bold text-center">
+              {String(hudData.bullets ?? 0).padStart(3, '0')}
+            </div>
+            <div className="text-orange-400 text-xs text-center">X / LMB</div>
+          </div>
+          {/* Missiles */}
+          <div className="bg-black/80 border border-red-500/50 px-3 py-2 rounded">
+            <div className="text-red-400 text-xs text-center">MISSILES</div>
+            <div className="text-white text-xl font-bold text-center">
+              {String(hudData.missiles ?? 0).padStart(3, '0')}
+            </div>
+            <div className="text-red-400 text-xs text-center">Z / RMB</div>
+          </div>
+        </div>
+      )}
 
       {/* Controls help - Bottom left */}
       <div className="absolute bottom-4 left-4 bg-black/70 border border-cyan-500/30 px-3 py-2 rounded text-xs text-gray-400 space-y-1">
@@ -147,6 +175,12 @@ export function FlightHUD({ hudData, traffic }: FlightHUDProps) {
         <div><span className="text-cyan-400">G</span> Gear</div>
         <div><span className="text-cyan-400">F</span> Flaps</div>
         <div><span className="text-cyan-400">C</span> Camera</div>
+        {hudData.hasWeapons && (
+          <>
+            <div><span className="text-orange-400">X/LMB</span> Fire Bullets</div>
+            <div><span className="text-red-400">Z/RMB</span> Fire Missile</div>
+          </>
+        )}
       </div>
 
       {/* Boost indicator - shows when near ground */}

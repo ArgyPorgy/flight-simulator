@@ -6,12 +6,14 @@ import { CityWorld } from './world/CityWorld';
 import { AITrafficManager, TrafficInfo } from './systems/AITrafficManager';
 import { SoundManager } from './audio/SoundManager';
 import { ExplosionEffect } from './effects/ExplosionEffect';
+import { WeaponSystem, WeaponState, BombBlastEffect, ImpactResult } from './systems/WeaponSystem';
 
 export interface FlightSimulatorCallbacks {
   onHUDUpdate?: (data: HUDData) => void;
   onTrafficUpdate?: (traffic: TrafficInfo[]) => void;
   onGameStateChange?: (state: GameState) => void;
   onScoreUpdate?: (score: GameScore) => void;
+  aircraftType?: string;
 }
 
 export interface HUDData {
@@ -27,6 +29,13 @@ export interface HUDData {
   fps: number;
   score?: number;
   isOnGround?: boolean;
+  // Weapon data (only for combat aircraft)
+  hasWeapons?: boolean;
+  bullets?: number;
+  missiles?: number;
+  maxBullets?: number;
+  maxMissiles?: number;
+  kills?: number;
 }
 
 export interface GameScore {
@@ -48,12 +57,19 @@ export class FlightSimulator {
   private trafficManager: AITrafficManager;
   private soundManager: SoundManager;
   private explosionEffect: ExplosionEffect;
+  private weaponSystem: WeaponSystem | null = null;
+  private bombBlastEffect: BombBlastEffect | null = null;
   
   private callbacks: FlightSimulatorCallbacks;
   private gameState: GameState = 'loading';
   private frameCount = 0;
   private lastFPSUpdate = 0;
   private fps = 60;
+  
+  // Aircraft type
+  private aircraftType: string = 'fighter';
+  private hasWeapons: boolean = false;
+  private kills: number = 0;
 
   // Scoring
   private startTime = 0;
@@ -69,6 +85,10 @@ export class FlightSimulator {
   
   constructor(container: HTMLElement, callbacks: FlightSimulatorCallbacks = {}) {
     this.callbacks = callbacks;
+    this.aircraftType = callbacks.aircraftType || 'fighter';
+    
+    // Check if this aircraft has weapons (F-16 Falcon or B-2 Spirit)
+    this.hasWeapons = this.aircraftType === 'fighter' || this.aircraftType === 'stealth';
     
     // Initialize sound manager
     this.soundManager = new SoundManager();
@@ -91,6 +111,13 @@ export class FlightSimulator {
     this.playerAircraft = new PlayerAircraft(this.inputManager);
     this.engine.scene.add(this.playerAircraft.mesh);
     
+    // Initialize weapon system for combat aircraft
+    if (this.hasWeapons) {
+      this.weaponSystem = new WeaponSystem(this.engine.scene);
+      this.bombBlastEffect = new BombBlastEffect(this.engine.scene);
+      console.log(`🎯 Weapons enabled for ${this.aircraftType}`);
+    }
+    
     // Start in stable level flight above the runway
     this.playerAircraft.state.position.set(-2500, 150, 500);
     this.playerAircraft.state.velocity.set(0, 0, -80);  // ~155 kts forward
@@ -103,9 +130,9 @@ export class FlightSimulator {
     this.lastPosition.copy(this.playerAircraft.state.position);
     this.lastGearState = this.playerAircraft.state.gearDown;
     
-    // Initialize AI traffic - 50 AI aircraft flying nearby
+    // Initialize AI traffic - 100 AI aircraft flying nearby
     this.trafficManager = new AITrafficManager(this.engine.scene);
-    this.trafficManager.initialize(50); // 50 AI aircraft
+    this.trafficManager.initialize(100); // 100 AI aircraft
     
     // Initialize explosion effect
     this.explosionEffect = new ExplosionEffect(this.engine.scene);
@@ -287,6 +314,11 @@ export class FlightSimulator {
       this.triggerCrash();
     }
     
+    // Update weapons if available
+    if (this.weaponSystem) {
+      this.updateWeapons(deltaTime);
+    }
+    
     // Update input manager
     this.inputManager.update();
     
@@ -305,6 +337,74 @@ export class FlightSimulator {
   }
 
   private isEmergencyActive = false;
+
+  private updateWeapons(deltaTime: number): void {
+    if (!this.weaponSystem) return;
+    
+    // Update bomb blast effects
+    this.bombBlastEffect?.update(deltaTime);
+    
+    // Get aircraft forward direction
+    const forward = new THREE.Vector3(0, 0, -1);
+    forward.applyEuler(this.playerAircraft.state.rotation);
+    
+    // Fire bullets with left mouse button or 'X' key (continuous fire)
+    if (this.inputManager.isMouseButtonDown(0) || this.inputManager.isKeyDown('KeyX')) {
+      const fired = this.weaponSystem.fireBullet(
+        this.playerAircraft.state.position.clone(),
+        forward
+      );
+      if (fired) {
+        this.soundManager.playBullet();
+      }
+    }
+    
+    // Fire missiles with right mouse button or 'Z' key (single fire)
+    if (this.inputManager.wasKeyJustPressed('KeyZ') || this.inputManager.isMouseButtonDown(2)) {
+      const fired = this.weaponSystem.fireMissile(
+        this.playerAircraft.state.position.clone(),
+        forward
+      );
+      if (fired) {
+        this.soundManager.playMissile();
+      }
+    }
+    
+    // Get AI aircraft positions as targets
+    const targets = this.trafficManager.getAircraftPositions();
+    
+    // Update projectiles and check for impacts (pass terrain height function)
+    const impacts = this.weaponSystem.update(
+      deltaTime, 
+      targets,
+      (x, z) => this.cityWorld.getHeightAt(x, z)
+    );
+    
+    // Process impacts
+    for (const impact of impacts) {
+      if (impact.type === 'aircraft') {
+        // Find and destroy the hit aircraft
+        const destroyed = this.trafficManager.destroyAircraftAt(impact.position);
+        if (destroyed) {
+          this.kills++;
+          this.totalScore += 500; // Bonus points for kills
+          this.explosionEffect.explode(impact.position);
+          this.soundManager.playCrash();
+        }
+      } else if (impact.projectileType === 'missile') {
+        // Missile hit ground or building - create bomb blast!
+        const isGround = impact.type === 'ground';
+        this.bombBlastEffect?.createBlast(impact.position, isGround);
+        this.soundManager.playExplosion();
+        
+        // Bonus points for hitting buildings
+        if (impact.type === 'building') {
+          this.totalScore += 100;
+        }
+      }
+      // Bullets hitting ground/buildings don't create big explosions
+    }
+  }
 
   private checkEmergency(terrainHeight: number): void {
     const altitude = this.playerAircraft.state.position.y;
@@ -453,6 +553,9 @@ export class FlightSimulator {
     const heightAboveGround = this.playerAircraft.state.position.y - terrainHeight;
     const isOnGround = heightAboveGround < 10; // Within 10 meters of ground
     
+    // Get weapon state if available
+    const weaponState = this.weaponSystem?.getState();
+    
     this.callbacks.onHUDUpdate({
       airspeed: Math.round(this.playerAircraft.getAirspeed()),
       altitude: Math.round(this.playerAircraft.getAltitude()),
@@ -466,6 +569,13 @@ export class FlightSimulator {
       fps: this.fps,
       score: this.totalScore,
       isOnGround: isOnGround,
+      // Weapon data
+      hasWeapons: this.hasWeapons,
+      bullets: weaponState?.bullets,
+      missiles: weaponState?.missiles,
+      maxBullets: weaponState?.maxBullets,
+      maxMissiles: weaponState?.maxMissiles,
+      kills: this.kills,
     });
   }
   
@@ -585,6 +695,8 @@ export class FlightSimulator {
   public dispose(): void {
     this.soundManager.dispose();
     this.explosionEffect.dispose();
+    this.weaponSystem?.dispose();
+    this.bombBlastEffect?.dispose();
     this.engine.dispose();
     this.inputManager.dispose();
     this.trafficManager.dispose();
